@@ -1,14 +1,16 @@
 import { Admin } from "@app/common/auth/user.decorator"
 import { movieListResponseSchema, movieSchema } from "@app/common/schemas/movie/schema"
+import { MovieType } from "@app/common/schemas/movie/types"
 import {
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  HttpStatus,
   Param,
-  Patch,
   Post,
+  Put,
   Query,
   UploadedFile,
   UseInterceptors,
@@ -18,6 +20,7 @@ import { ApiOkResponse, ApiQuery } from "@nestjs/swagger"
 import { zodToOpenAPI } from "nestjs-zod"
 
 import { CreateMovieDto } from "./dto/create-movie.dto"
+import { CreateReservationDto } from "./dto/create-reservation.dto"
 import { ListMovieDto } from "./dto/list-movie.dto"
 import { UpdateMovieDto } from "./dto/update-movie.dto"
 import { MovieService } from "./movie.service"
@@ -25,28 +28,6 @@ import { MovieService } from "./movie.service"
 @Controller("movies")
 export class MovieController {
   constructor(private readonly movieService: MovieService) {}
-
-  @Admin()
-  @HttpCode(201)
-  @Post()
-  @UseInterceptors(FileInterceptor("poster", { limits: { fileSize: 1024 * 1024 * 10 } }))
-  @ApiOkResponse({ schema: zodToOpenAPI(movieSchema) })
-  create(@Body() data: CreateMovieDto, @UploadedFile() poster: Express.Multer.File) {
-    return this.movieService.create(data, poster)
-  }
-
-  @Get()
-  @ApiQuery({
-    name: "limit",
-    required: false,
-    schema: { type: "number", minimum: 1, maximum: 100, default: 10 },
-  })
-  @ApiQuery({ name: "page", required: false, schema: { type: "number", minimum: 1, default: 1 } })
-  @ApiQuery({ name: "query", required: false, schema: { type: "string" } })
-  @ApiOkResponse({ schema: zodToOpenAPI(movieListResponseSchema) })
-  findAll(@Query() query: ListMovieDto) {
-    return this.movieService.findAll(query)
-  }
 
   @Get("categories")
   findAllCategories() {
@@ -58,6 +39,30 @@ export class MovieController {
     return this.movieService.findAllByCategory(id)
   }
 
+  @Admin()
+  @HttpCode(HttpStatus.CREATED)
+  @Post()
+  @UseInterceptors(FileInterceptor("poster", { limits: { fileSize: 1024 * 1024 * 10 } }))
+  @ApiOkResponse({ schema: zodToOpenAPI(movieSchema) })
+  create(@Body() data: CreateMovieDto, @UploadedFile() poster: Express.Multer.File) {
+    return this.movieService.create(data, poster)
+  }
+
+  @Get()
+  @HttpCode(HttpStatus.OK)
+  // @ApiQuery({
+  //   name: "limit",
+  //   required: false,
+  //   schema: { type: "number", minimum: 1, maximum: 100, default: 10 },
+  // })
+  // @ApiQuery({ name: "page", required: false, schema: { type: "number", minimum: 1, default: 1 } })
+  @ApiQuery({ name: "query", required: false, schema: { type: "string" } })
+  @ApiOkResponse({ schema: zodToOpenAPI(movieListResponseSchema) })
+  async findAll(@Query() query: ListMovieDto): Promise<MovieType[] | null> {
+    const movies = await this.movieService.findAll(query)
+    return movies.length ? movies : null
+  }
+
   @Get(":id")
   @ApiOkResponse({ schema: zodToOpenAPI(movieSchema) })
   findOne(@Param("id") id: string) {
@@ -65,7 +70,7 @@ export class MovieController {
   }
 
   @Admin()
-  @Patch(":id")
+  @Put(":id")
   @UseInterceptors(FileInterceptor("poster", { limits: { fileSize: 1024 * 1024 * 10 } }))
   @ApiOkResponse({ schema: zodToOpenAPI(movieSchema) })
   update(
@@ -81,5 +86,11 @@ export class MovieController {
   @ApiOkResponse()
   remove(@Param("id") id: string) {
     return this.movieService.delete(id)
+  }
+
+  @Post(":id/reservations")
+  @ApiOkResponse()
+  createReservation(@Param("id") id: string, @Body() body: CreateReservationDto) {
+    return this.movieService.createReservation(id, body)
   }
 }

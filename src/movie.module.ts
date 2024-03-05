@@ -1,4 +1,5 @@
 import { CommonModule } from "@app/common"
+import { RmqModule } from "@app/common/rmq/rmq.module"
 import { Module } from "@nestjs/common"
 import { ConfigModule } from "@nestjs/config"
 import { MulterModule } from "@nestjs/platform-express"
@@ -14,6 +15,8 @@ import { MovieService } from "./movie.service"
       isGlobal: true,
       validationSchema: joi.object({
         DATABASE_URL: joi.string().required(),
+        JWT_SECRET: joi.string().required(),
+        RABBIT_MQ_URL: joi.string().required(),
       }),
       envFilePath: "./apps/movie/.env",
     }),
@@ -22,6 +25,7 @@ import { MovieService } from "./movie.service"
       rootPath: "./apps/movie/posters",
       serveRoot: "/posters",
     }),
+    RmqModule.register({ name: "RESERVATION" }),
     CommonModule,
   ],
   controllers: [MovieController],

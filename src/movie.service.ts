@@ -7,13 +7,11 @@ import {
   MovieUpdateType,
 } from "@app/common/schemas/movie/types"
 import { ReservationCreateType } from "@app/common/schemas/reservation/types"
-import { UserReadType } from "@app/common/schemas/user/types"
-import { Inject, Injectable, NotFoundException, UnauthorizedException } from "@nestjs/common"
-import { ClientProxy, RpcException } from "@nestjs/microservices"
+import { Inject, Injectable, NotFoundException } from "@nestjs/common"
+import { ClientProxy } from "@nestjs/microservices"
 import { randomUUID } from "crypto"
 import { rename } from "fs/promises"
 import { join } from "path"
-import { catchError, lastValueFrom } from "rxjs"
 
 @Injectable()
 export class MovieService {

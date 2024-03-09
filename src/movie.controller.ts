@@ -1,4 +1,4 @@
-import { Admin } from "@app/common/auth/user.decorator"
+import { Admin, Public } from "@app/common/auth/user.decorator"
 import { movieListResponseSchema, movieSchema } from "@app/common/schemas/movie/schema"
 import { MovieType } from "@app/common/schemas/movie/types"
 import {
@@ -17,6 +17,7 @@ import {
 } from "@nestjs/common"
 import { FileInterceptor } from "@nestjs/platform-express"
 import { ApiOkResponse, ApiQuery } from "@nestjs/swagger"
+import { HealthCheck, HealthCheckService } from "@nestjs/terminus"
 import { zodToOpenAPI } from "nestjs-zod"
 
 import { CreateMovieDto } from "./dto/create-movie.dto"
@@ -27,7 +28,17 @@ import { MovieService } from "./movie.service"
 
 @Controller("movies")
 export class MovieController {
-  constructor(private readonly movieService: MovieService) {}
+  constructor(
+    private readonly movieService: MovieService,
+    private readonly health: HealthCheckService,
+  ) {}
+
+  @Public()
+  @Get("health")
+  @HealthCheck()
+  check() {
+    return this.health.check([])
+  }
 
   @Get("categories")
   findAllCategories() {

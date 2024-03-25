@@ -6,12 +6,13 @@ import {
   MovieType,
   MovieUpdateType,
 } from "@app/common/schemas/movie/types"
-import { ReservationCreateType } from "@app/common/schemas/reservation/types"
-import { Inject, Injectable, NotFoundException } from "@nestjs/common"
+import { ReservationCreateType, ReservationType } from "@app/common/schemas/reservation/types"
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common"
 import { ClientProxy } from "@nestjs/microservices"
 import { randomUUID } from "crypto"
 import { rename } from "fs/promises"
 import { join } from "path"
+import { catchError, lastValueFrom, throwError } from "rxjs"
 
 @Injectable()
 export class MovieService {
@@ -162,31 +163,40 @@ export class MovieService {
     })
   }
 
-  async createReservation(movieUid: string, data: ReservationCreateType) {
-    const now = Date.now()
-    const response = await new Promise((resolve, reject) => {
+  async getAllReservationsByMovie(movieId: string) {
+    const reservations: ReservationType[] = await lastValueFrom(
+      this.reservationClient
+        .send("reservation.movie.list", { movieId })
+        .pipe(catchError(() => throwError(() => new NotFoundException()))),
+    )
+
+    return reservations
+  }
+  async getAllReservationsBySceance(movieId: string, sceanceId: string) {
+    const reservations: ReservationType[] = await lastValueFrom(
+      this.reservationClient
+        .send("reservation.sceance.list", { movieId, sceanceId })
+        .pipe(catchError(() => throwError(() => new NotFoundException()))),
+    )
+
+    return reservations
+  }
+  async createReservation(movieId: string, userId: string, data: ReservationCreateType) {
+    const response = await new Promise<
+      { type: "error"; message: string } | { type: "success"; data: unknown } | null
+    >((resolve, reject) => {
       const correlationId = randomUUID()
       const replyTo = "amq.rabbitmq.reply-to"
 
       this.reservationClient
-        .send("reservation.create", { id: movieUid, data, correlationId, replyTo })
+        .send("reservation.create", { movieId, userId, data, correlationId, replyTo })
         .subscribe({
           next: response => resolve(response),
           error: error => reject(error),
         })
     })
+    if (response?.type !== "success") throw new BadRequestException(response?.message)
 
     return response
-    // const response = await new Promise(resolve => {
-    //   this.reservationClient.send("reservation.create", { id: movieUid, data }).subscribe({
-    //     next: response => resolve(response),
-    //     error: error => console.error(error),
-    //   })
-    // })
-    // // const reservation = await this.reservationClient
-    // //   .send("reservation.create", { id: movieUid, data })
-    // //   .subscribe()
-    // console.log(Date.now() - now)
-    return Date.now() - now
   }
 }

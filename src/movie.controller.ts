@@ -1,6 +1,7 @@
-import { Admin, Public } from "@app/common/auth/user.decorator"
+import { Admin, Public, User } from "@app/common/auth/user.decorator"
 import { movieListResponseSchema, movieSchema } from "@app/common/schemas/movie/schema"
 import { MovieType } from "@app/common/schemas/movie/types"
+import { UserType } from "@app/common/schemas/user/types"
 import {
   Body,
   Controller,
@@ -99,9 +100,27 @@ export class MovieController {
     return this.movieService.delete(id)
   }
 
+  @Admin()
+  @Get(":id/reservations")
+  @ApiOkResponse()
+  getAllReservationsByMovie(@Param("id") id: string) {
+    return this.movieService.getAllReservationsByMovie(id)
+  }
+
+  @Admin()
+  @Get(":id/sceances/:sceanceId/reservations")
+  @ApiOkResponse()
+  getAllReservationsBySceance(@Param("id") id: string, @Param("sceanceId") sceanceId: string) {
+    return this.movieService.getAllReservationsBySceance(id, sceanceId)
+  }
+
   @Post(":id/reservations")
   @ApiOkResponse()
-  createReservation(@Param("id") id: string, @Body() body: CreateReservationDto) {
-    return this.movieService.createReservation(id, body)
+  createReservation(
+    @Param("id") id: string,
+    @Body() body: CreateReservationDto,
+    @User() user: UserType,
+  ) {
+    return this.movieService.createReservation(id, user.uid, body)
   }
 }
